@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Confirmação Mestre (Simulação)</title>
+    <!-- Carrega Tailwind CSS para um design responsivo e moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter e o tema escuro padrão */
+        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; color: #f9f9f9; }
+        .glow-red { box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); }
+        .glow-green { box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); border: 4px solid #00AA00; } 
+        .image-container:not(.disabled):hover { transform: scale(1.03); transition: transform 0.2s; }
+        .flashing { animation: red-flash 0.1s infinite alternate; }
+        @keyframes red-flash {
+            from { background-color: #0d0d0d; }
+            to { background-color: #400000; }
+        }
+        /* Estilo para a transição do acordeão */
+        .accordion-content {
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 1rem;
+        }
+        .accordion-content.active {
+            max-height: 500px; /* Valor grande suficiente para o conteúdo */
+            padding: 1rem;
+        }
+        .rotate-90 {
+            transform: rotate(90deg);
+            transition: transform 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container principal da aplicação -->
+    <div id="app" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <!-- Conteúdo dinâmico será injetado aqui pelo JavaScript -->
+    </div>
+
+    <script>
+        // --- Variáveis de Estado Global e Persistência Local ---
+        // Funções auxiliares para gerenciar localStorage de forma segura
+        const getLocal = (key, defaultValue) => {
+            const value = localStorage.getItem(key);
+            if (value === null) return defaultValue;
+            if (defaultValue === true || defaultValue === false) return value === 'true';
+            return value;
+        };
+
+        const setLocal = (key, value) => {
+            localStorage.setItem(key, String(value));
+        };
+
+        let screen = getLocal('screen', 'name_input');
+        let userName = getLocal('userName', '');
+        let selectedChoice = getLocal('selectedChoice', null); // ID da escolha (img_1, img_2...)
+        let status = getLocal('status', 'NONE'); // NONE, PENDING, CONFIRMED, REJECTED
+        let confirmedAccess = getLocal('confirmedAccess', false); // Confirmação final de acesso do usuário
+        let isMasked = getLocal('isMasked', false);
+        
+        // Simulação de Áudio (Usando URL de exemplo)
+        const audioTense = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); 
+        
+        // Placeholder das imagens e dados completos (AGORA COM CAMINHOS EXPLÍCITOS, SEM LOOP)
+        const IMAGES = [
+            // IMAGEM 1
+            {
+                id: 'img_1',
+                // CAMINHO REAL ESPERADO: img/img1.jpg (800x457)
+                selectionUrl: 'img/img1.jpg', 
+                // CAMINHO REAL ESPERADO: img/foto1.jpg (584x800)
+                normalUrl: 'img/foto1.jpg', 
+                // CAMINHO REAL ESPERADO: img/masc1.jpg (584x800)
+                maskedUrl: 'img/masc1.jpg', 
+
+                // Estrutura detalhada para o acordeão
+                details: [
+                    {
+                        title: "Origem",
+                        info: `Local de Nascimento: Cidade Padrão 1. Os dados de sua infância são públicos e rastreáveis.`,
+                        maskInfo: `ORIGEM SECRETA: [Informação Classificada: Projeto Delta-1] - A Operação Ω foi iniciada em 2045.`,
+                    },
+                    {
+                        title: "Habilidade Primária",
+                        info: `Seu domínio primário é a análise estatística e lógica preditiva. Sem registro de combate.`,
+                        maskInfo: "PODER DE NÍVEL 5: 'Visão Zero' - Capacidade de prever movimentos inimigos com 99.9% de precisão. Oculto por protocolo.",
+                    },
+                    {
+                        title: "Afiliação Conhecida",
+                        info: "Atualmente listado como Agente Independente (Freelancer). Sem laços governamentais.",
+                        maskInfo: "AFILIAÇÃO REAL: Membro fundador do 'Conselho Sombra'. Status: Ativo. Prioridade: Proteger o Mestre.",
+                    },
+                    {
+                        title: "Status de Segurança",
+                        info: "Status: Verde (Nível Padrão de Acesso, sem ameaças conhecidas).",
+                        maskInfo: "PROTOCOLO DE SEGURANÇA: Vermelho (Alerta Máximo - Alvo de Alta Prioridade para facções rivais).",
+                    },
+                    {
+                        title: "Histórico de Missões",
+                        info: "Registro público: Missão Alpha, Beta e Gamma (Sucesso). Dados disponíveis no Arquivo Central.",
+                        maskInfo: "HISTÓRICO REAL: Responsável por três colapsos de rede globais não documentados (Operação Darknet).",
+                    }
+                ]
+            },
+            
+            // IMAGEM 2
+            {
+                id: 'img_2',
+                selectionUrl: 'img/img2.jpg', 
+                normalUrl: 'img/foto2.jpg', 
+                maskedUrl: 'img/masc2.jpg', 
+                details: [
+                    {
+                        title: "Origem",
+                        info: `Local de Nascimento: Cidade Padrão 2. Os dados de sua infância são públicos e rastreáveis.`,
+                        maskInfo: `ORIGEM SECRETA: [Informação Classificada: Projeto Delta-2] - A Operação Ω foi iniciada em 2045.`,
+                    },
+                    {
+                        title: "Habilidade Primária",
+                        info: `Seu domínio primário é a análise estatística e lógica preditiva. Sem registro de combate.`,
+                        maskInfo: "PODER DE NÍVEL 5: 'Visão Zero' - Capacidade de prever movimentos inimigos com 99.9% de precisão. Oculto por protocolo.",
+                    },
+                    {
+                        title: "Afiliação Conhecida",
+                        info: "Atualmente listado como Agente Independente (Freelancer). Sem laços governamentais.",
+                        maskInfo: "AFILIAÇÃO REAL: Membro fundador do 'Conselho Sombra'. Status: Ativo. Prioridade: Proteger o Mestre.",
+                    },
+                    {
+                        title: "Status de Segurança",
+                        info: "Status: Verde (Nível Padrão de Acesso, sem ameaças conhecidas).",
+                        maskInfo: "PROTOCOLO DE SEGURANÇA: Vermelho (Alerta Máximo - Alvo de Alta Prioridade para facções rivais).",
+                    },
+                    {
+                        title: "Histórico de Missões",
+                        info: "Registro público: Missão Alpha, Beta e Gamma (Sucesso). Dados disponíveis no Arquivo Central.",
+                        maskInfo: "HISTÓRICO REAL: Responsável por três colapsos de rede globais não documentados (Operação Darknet).",
+                    }
+                ]
+            },
+
+            // IMAGEM 3
+            {
+                id: 'img_3',
+                selectionUrl: 'img/img3.jpg', 
+                normalUrl: 'img/foto3.jpg', 
+                maskedUrl: 'img/masc3.jpg', 
+                details: [
+                    {
+                        title: "Origem",
+                        info: `Local de Nascimento: Cidade Padrão 3. Os dados de sua infância são públicos e rastreáveis.`,
+                        maskInfo: `ORIGEM SECRETA: [Informação Classificada: Projeto Delta-3] - A Operação Ω foi iniciada em 2045.`,
+                    },
+                    {
+                        title: "Habilidade Primária",
+                        info: `Seu domínio primário é a análise estatística e lógica preditiva. Sem registro de combate.`,
+                        maskInfo: "PODER DE NÍVEL 5: 'Visão Zero' - Capacidade de prever movimentos inimigos com 99.9% de precisão. Oculto por protocolo.",
+                    },
+                    {
+                        title: "Afiliação Conhecida",
+                        info: "Atualmente listado como Agente Independente (Freelancer). Sem laços governamentais.",
+                        maskInfo: "AFILIAÇÃO REAL: Membro fundador do 'Conselho Sombra'. Status: Ativo. Prioridade: Proteger o Mestre.",
+                    },
+                    {
+                        title: "Status de Segurança",
+                        info: "Status: Verde (Nível Padrão de Acesso, sem ameaças conhecidas).",
+                        maskInfo: "PROTOCOLO DE SEGURANÇA: Vermelho (Alerta Máximo - Alvo de Alta Prioridade para facções rivais).",
+                    },
+                    {
+                        title: "Histórico de Missões",
+                        info: "Registro público: Missão Alpha, Beta e Gamma (Sucesso). Dados disponíveis no Arquivo Central.",
+                        maskInfo: "HISTÓRICO REAL: Responsável por três colapsos de rede globais não documentados (Operação Darknet).",
+                    }
+                ]
+            },
+
+            // IMAGEM 4
+            {
+                id: 'img_4',
+                selectionUrl: 'img/img4.jpg', 
+                normalUrl: 'img/foto4.jpg', 
+                maskedUrl: 'img/masc4.jpg', 
+                details: [
+                    {
+                        title: "Origem",
+                        info: `Local de Nascimento: Cidade Padrão 4. Os dados de sua infância são públicos e rastreáveis.`,
+                        maskInfo: `ORIGEM SECRETA: [Informação Classificada: Projeto Delta-4] - A Operação Ω foi iniciada em 2045.`,
+                    },
+                    {
+                        title: "Habilidade Primária",
+                        info: `Seu domínio primário é a análise estatística e lógica preditiva. Sem registro de combate.`,
+                        maskInfo: "PODER DE NÍVEL 5: 'Visão Zero' - Capacidade de prever movimentos inimigos com 99.9% de precisão. Oculto por protocolo.",
+                    },
+                    {
+                        title: "Afiliação Conhecida",
+                        info: "Atualmente listado como Agente Independente (Freelancer). Sem laços governamentais.",
+                        maskInfo: "AFILIAÇÃO REAL: Membro fundador do 'Conselho Sombra'. Status: Ativo. Prioridade: Proteger o Mestre.",
+                    },
+                    {
+                        title: "Status de Segurança",
+                        info: "Status: Verde (Nível Padrão de Acesso, sem ameaças conhecidas).",
+                        maskInfo: "PROTOCOLO DE SEGURANÇA: Vermelho (Alerta Máximo - Alvo de Alta Prioridade para facções rivais).",
+                    },
+                    {
+                        title: "Histórico de Missões",
+                        info: "Registro público: Missão Alpha, Beta e Gamma (Sucesso). Dados disponíveis no Arquivo Central.",
+                        maskInfo: "HISTÓRICO REAL: Responsável por três colapsos de rede globais não documentados (Operação Darknet).",
+                    }
+                ]
+            },
+            
+            // IMAGEM 5
+            {
+                id: 'img_5',
+                selectionUrl: 'img/img5.jpg', 
+                normalUrl: 'img/foto5.jpg', 
+                maskedUrl: 'img/masc5.jpg', 
+                details: [
+                    {
+                        title: "Origem",
+                        info: `Local de Nascimento: Cidade Padrão 5. Os dados de sua infância são públicos e rastreáveis.`,
+                        maskInfo: `ORIGEM SECRETA: [Informação Classificada: Projeto Delta-5] - A Operação Ω foi iniciada em 2045.`,
+                    },
+                    {
+                        title: "Habilidade Primária",
+                        info: `Seu domínio primário é a análise estatística e lógica preditiva. Sem registro de combate.`,
+                        maskInfo: "PODER DE NÍVEL 5: 'Visão Zero' - Capacidade de prever movimentos inimigos com 99.9% de precisão. Oculto por protocolo.",
+                    },
+                    {
+                        title: "Afiliação Conhecida",
+                        info: "Atualmente listado como Agente Independente (Freelancer). Sem laços governamentais.",
+                        maskInfo: "AFILIAÇÃO REAL: Membro fundador do 'Conselho Sombra'. Status: Ativo. Prioridade: Proteger o Mestre.",
+                    },
+                    {
+                        title: "Status de Segurança",
+                        info: "Status: Verde (Nível Padrão de Acesso, sem ameaças conhecidas).",
+                        maskInfo: "PROTOCOLO DE SEGURANÇA: Vermelho (Alerta Máximo - Alvo de Alta Prioridade para facções rivais).",
+                    },
+                    {
+                        title: "Histórico de Missões",
+                        info: "Registro público: Missão Alpha, Beta e Gamma (Sucesso). Dados disponíveis no Arquivo Central.",
+                        maskInfo: "HISTÓRICO REAL: Responsável por três colapsos de rede globais não documentados (Operação Darknet).",
+                    }
+                ]
+            },
+        ];
+
+        const appDiv = document.getElementById('app');
+        
+        // Simulação de modal de aviso (substitui alert())
+        function showMessage(title, message, type = 'error') {
+            const color = type === 'error' ? 'bg-red-800 border-red-500' : 'bg-green-800 border-green-500';
+            const html = `
+                <div id="custom-alert" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                    <div class="${color} border-l-4 p-6 rounded-lg shadow-2xl w-full max-w-sm text-center">
+                        <h3 class="text-xl font-bold mb-3">${title}</h3>
+                        <p class="mb-4 text-gray-200">${message}</p>
+                        <button onclick="document.getElementById('custom-alert').remove()"
+                            class="py-2 px-6 rounded-lg font-semibold bg-gray-600 hover:bg-gray-700 transition">
+                            Entendi
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+        }
+
+        // Função para alternar o estado do acordeão
+        function toggleAccordion(id) {
+            const content = document.getElementById(`accordion-content-${id}`);
+            const icon = document.getElementById(`accordion-icon-${id}`);
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                icon.classList.remove('rotate-90');
+            } else {
+                // Fechar todos os outros acordeões
+                document.querySelectorAll('.accordion-content.active').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelectorAll('.accordion-icon').forEach(item => {
+                    item.classList.remove('rotate-90');
+                });
+                
+                content.classList.add('active');
+                icon.classList.add('rotate-90');
+            }
+        }
+        window.toggleAccordion = toggleAccordion;
+
+        /**
+         * Lida com a entrada do nome do usuário.
+         */
+        function handleNameSubmit(name) {
+            if (name.trim() === '') {
+                showMessage('Aviso', 'Por favor, digite seu nome.', 'warning'); 
+                return;
+            }
+            userName = name.trim();
+            setLocal('userName', userName);
+            screen = 'image_selection';
+            setLocal('screen', screen);
+            render();
+        }
+        
+        /**
+         * Lida com a seleção de uma imagem e define o status como PENDING.
+         * @param {string} choiceId - ID da imagem escolhida.
+         */
+        function handleImageSelect(choiceId) {
+            if (status === 'CONFIRMED' || confirmedAccess) {
+                showMessage('Escolha Bloqueada', 'O acesso já foi confirmado. Reinicie para fazer uma nova seleção.', 'warning');
+                return;
+            }
+            selectedChoice = choiceId;
+            status = 'PENDING';
+            setLocal('selectedChoice', selectedChoice);
+            setLocal('status', status);
+            confirmedAccess = false; 
+            setLocal('confirmedAccess', confirmedAccess);
+            render(); 
+        }
+
+        /**
+         * Simula a aprovação pelo Mestre (simulação de backend).
+         */
+        function simulateMasterConfirm() {
+            if (!selectedChoice) {
+                showMessage('Erro Mestre', 'Nenhuma escolha feita pelo usuário para aprovar.', 'warning');
+                return;
+            }
+            status = 'CONFIRMED';
+            setLocal('status', status);
+            render();
+        }
+
+        /**
+         * Simula a rejeição pelo Mestre (simulação de backend).
+         */
+        function simulateMasterReject() {
+            if (!selectedChoice) {
+                showMessage('Erro Mestre', 'Nenhuma escolha feita pelo usuário para rejeitar.', 'warning');
+                return;
+            }
+            status = 'REJECTED';
+            setLocal('status', status);
+            confirmedAccess = false;
+            setLocal('confirmedAccess', confirmedAccess);
+            render();
+        }
+
+        /**
+         * Lida com o clique final no botão "Confirmar Acesso" (usuário).
+         */
+        function handleConfirmAccess() {
+            if (status !== 'CONFIRMED' || confirmedAccess) return;
+
+            confirmedAccess = true;
+            setLocal('confirmedAccess', confirmedAccess);
+            
+            // Transição para a tela final
+            screen = 'personal_page';
+            setLocal('screen', screen);
+            render();
+        }
+        
+        /**
+         * Lida com o clique no botão "Máscara" (efeito e transição).
+         */
+        function handleMaskOn() {
+            audioTense.loop = true;
+            audioTense.volume = 0.5;
+            audioTense.play().catch(e => console.warn("Erro ao tocar música:", e));
+
+            const body = document.body;
+            body.classList.add('flashing');
+            
+            setTimeout(() => {
+                body.classList.remove('flashing');
+                isMasked = true;
+                setLocal('isMasked', isMasked);
+                render();
+            }, 2000); 
+        }
+        
+        /**
+         * Lida com o clique no botão "Tirar a Máscara" (efeito e transição).
+         */
+        function handleMaskOff() {
+            audioTense.pause();
+            audioTense.currentTime = 0; // Volta para o início
+
+            isMasked = false;
+            setLocal('isMasked', isMasked);
+            render();
+        }
+
+        // --- Funções de Renderização (Tela) ---
+
+        function renderNameInput() {
+            appDiv.innerHTML = `
+                <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-sm text-center border border-red-600">
+                    <h1 class="text-3xl font-bold mb-6 text-red-400">Entrar na Sala (Simulação)</h1>
+                    <p class="mb-4 text-gray-300">Para começar, qual é o seu nome?</p>
+                    <input id="name-input" type="text" placeholder="Seu Nome" 
+                            value="${userName}" 
+                            class="w-full p-3 mb-6 rounded-lg bg-gray-700 border border-gray-600 focus:ring-red-500 focus:border-red-500 text-white" />
+                    <button id="start-button" class="w-full py-3 rounded-lg font-semibold 
+                                                     bg-red-600 hover:bg-red-700 transition duration-150">
+                        Entrar
+                    </button>
+                    <button onclick="window.clearStorage()" class="text-xs mt-4 text-gray-500 hover:text-red-400">
+                        Limpar Dados (Recomeçar)
+                    </button>
+                </div>
+            `;
+            document.getElementById('start-button').onclick = () => {
+                const input = document.getElementById('name-input');
+                handleNameSubmit(input.value);
+            };
+        }
+
+        function renderImageSelection() {
+            const imageChoices = IMAGES.map(img => {
+                let borderClass = 'border-4 border-transparent';
+                let opacity = 'opacity-100';
+                
+                // Borda de Seleção Local (Vermelha) - Se estiver PENDING ou REJECTED
+                if (selectedChoice === img.id && status !== 'CONFIRMED') {
+                    borderClass = 'border-4 border-red-500 glow-red';
+                }
+                
+                // Borda de Status Final (Verde) - Se for a escolha confirmada
+                if (status === 'CONFIRMED' && selectedChoice === img.id) {
+                    borderClass = 'border-4 border-green-500 glow-green';
+                    opacity = 'opacity-100'; // Garante que a escolha final esteja visível
+                } else if (status === 'CONFIRMED' && selectedChoice !== img.id) {
+                    opacity = 'opacity-50'; // Diminui o brilho das não escolhidas após a confirmação
+                }
+
+                // Desabilita interação se a escolha já estiver confirmada
+                const isDisabled = confirmedAccess || status === 'CONFIRMED';
+                const cursorClass = isDisabled ? 'cursor-default opacity-75' : 'cursor-pointer';
+                
+                // Imagem de Seleção usa a proporção 800x457 (landscape)
+                return `
+                    <div class="image-container flex flex-col items-center p-2 ${cursorClass} ${isDisabled ? 'disabled' : ''} w-full md:w-1/5">
+                        <img src="${img.selectionUrl}" alt="${img.id}" data-id="${img.id}" 
+                             class="rounded-lg w-full h-auto ${borderClass} ${opacity} object-cover" 
+                             onclick="${isDisabled ? '' : `window.handleImageSelect('${img.id}')`}" />
+                        
+                        ${selectedChoice === img.id ? 
+                            `<div class="mt-2 text-sm font-semibold text-center ${status === 'CONFIRMED' ? 'text-green-400' : 'text-red-400'}">
+                                ${userName}
+                            </div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            let statusMessage = 'Selecione uma imagem para iniciar a revisão.';
+            let statusColor = 'text-gray-400';
+            let showMasterPanel = false;
+            let showConfirmAccessButton = false;
+
+            if (selectedChoice) {
+                showMasterPanel = true;
+                if (status === 'PENDING') {
+                    statusMessage = 'ESPERANDO A CONFIRMAÇÃO DO MESTRE';
+                    statusColor = 'text-yellow-400 animate-pulse';
+                } else if (status === 'CONFIRMED') {
+                    statusMessage = 'APROVADO! Confirmação do Mestre recebida. Prossiga.';
+                    statusColor = 'text-green-500';
+                    showConfirmAccessButton = true;
+                } else if (status === 'REJECTED') {
+                    statusMessage = 'REJEITADO. Por favor, faça uma nova seleção.';
+                    statusColor = 'text-red-500';
+                } else if (status === 'NONE') {
+                    statusMessage = 'Imagem selecionada. Aguardando Master.';
+                    statusColor = 'text-gray-400';
+                }
+            }
+
+
+            appDiv.innerHTML = `
+                <div class="w-full max-w-6xl bg-gray-800 p-8 rounded-xl shadow-2xl text-center border border-red-600">
+                    <h1 class="text-3xl font-bold mb-8 text-red-400">Escolha seu Avatar</h1>
+                    
+                    <!-- Grid para as 5 imagens de seleção (800x457) -->
+                    <div class="flex justify-center items-start flex-wrap gap-4 mb-8">
+                        ${imageChoices}
+                    </div>
+
+                    <!-- Status de Confirmação -->
+                    <p class="text-xl font-bold mb-6 ${statusColor}">${statusMessage}</p>
+
+                    <!-- Botão de Confirmação Final do Usuário -->
+                    ${showConfirmAccessButton && !confirmedAccess ? `
+                        <button id="confirm-access-button" 
+                                class="py-3 px-12 rounded-lg font-semibold transition duration-150 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/50">
+                            CONFIRMAR ACESSO
+                        </button>
+                    ` : ''}
+
+                    <!-- Painel de Simulação do Mestre (para controle durante o teste) -->
+                    ${showMasterPanel ? `
+                        <div class="mt-8 p-4 bg-gray-900 border-l-4 border-yellow-500 rounded-lg shadow-inner w-full max-w-lg mx-auto">
+                            <h3 class="text-lg font-semibold text-yellow-400 mb-3">
+                                Painel de Simulação do Mestre
+                            </h3>
+                            <p class="text-sm text-gray-400 mb-4">
+                                Simule a ação de aprovação ou rejeição da escolha do usuário.
+                            </p>
+                            <div class="flex justify-center space-x-4">
+                                <button onclick="window.simulateMasterConfirm()"
+                                        class="py-2 px-6 rounded-lg font-semibold bg-green-600 hover:bg-green-700 transition disabled:opacity-50"
+                                        ${status === 'CONFIRMED' || confirmedAccess ? 'disabled' : ''}>
+                                    Aprovar
+                                </button>
+                                <button onclick="window.simulateMasterReject()"
+                                        class="py-2 px-6 rounded-lg font-semibold bg-red-600 hover:bg-red-700 transition disabled:opacity-50"
+                                        ${status === 'CONFIRMED' || confirmedAccess ? 'disabled' : ''}>
+                                    Rejeitar
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <p class="text-xs mt-6 text-gray-500">Usuário: ${userName}</p>
+                </div>
+            `;
+            
+            // Anexar listeners
+            window.handleImageSelect = handleImageSelect;
+            window.simulateMasterConfirm = simulateMasterConfirm;
+            window.simulateMasterReject = simulateMasterReject;
+            
+            if (document.getElementById('confirm-access-button')) {
+                document.getElementById('confirm-access-button').onclick = handleConfirmAccess;
+            }
+        }
+
+        function renderPersonalPage() {
+            const finalImage = IMAGES.find(img => img.id === selectedChoice);
+            
+            if (!finalImage || !confirmedAccess) {
+                // Se a página pessoal for acessada sem confirmação, volta
+                screen = 'image_selection';
+                setLocal('screen', screen);
+                render();
+                return;
+            }
+            
+            const isMaskedActive = isMasked;
+            const buttonText = isMaskedActive ? 'TIRAR A MÁSCARA' : 'MÁSCARA';
+            const buttonAction = isMaskedActive ? 'window.handleMaskOff()' : 'window.handleMaskOn()';
+            const pageTitle = isMaskedActive ? 'Página Pessoal - MÁSCARA ATIVA' : 'Página Pessoal (Acesso Liberado)';
+            const imageBorderClass = isMaskedActive ? 'border-black glow-red' : 'border-green-500 glow-green';
+            const detailColor = isMaskedActive ? 'text-red-300' : 'text-gray-300';
+            const bgAccordion = isMaskedActive ? 'bg-black/50 hover:bg-black/80' : 'bg-gray-700 hover:bg-gray-600';
+            const iconColor = isMaskedActive ? 'text-red-500' : 'text-yellow-400';
+            
+            // Seleciona o URL da imagem correta (584x800)
+            const imageUrl = isMaskedActive ? finalImage.maskedUrl : finalImage.normalUrl;
+
+            const accordionItems = finalImage.details.map((detail, index) => {
+                // O conteúdo muda dependendo do estado da máscara
+                const content = isMaskedActive ? detail.maskInfo : detail.info;
+                const id = `${finalImage.id}-${index}`;
+                return `
+                    <div class="mb-2 rounded-lg overflow-hidden border border-gray-600/50">
+                        <!-- Título do Acordeão (Clicável) -->
+                        <button onclick="window.toggleAccordion('${id}')" 
+                                class="w-full flex justify-between items-center p-4 font-semibold text-left transition duration-200 ${bgAccordion}">
+                            <span>${detail.title.toUpperCase()}</span>
+                            <!-- Ícone de seta SVG para rotação -->
+                            <svg id="accordion-icon-${id}" class="w-4 h-4 accordion-icon ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                        
+                        <!-- Conteúdo do Acordeão (Oculto por padrão) -->
+                        <div id="accordion-content-${id}" class="accordion-content text-sm ${isMaskedActive ? 'bg-red-900/20' : 'bg-gray-700/50'}">
+                            <p class="${detailColor} leading-relaxed">${content}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+
+            appDiv.innerHTML = `
+                <div class="w-full max-w-sm sm:max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl text-center border border-red-600">
+                    <h1 class="text-3xl font-bold mb-8 ${isMaskedActive ? 'text-black bg-red-500 p-2 rounded' : 'text-red-400'}">${pageTitle}</h1>
+                    
+                    <!-- Imagem 584x800 (proporção retrato) com largura fixa para melhor visualização -->
+                    <img src="${imageUrl}" alt="${finalImage.id}" 
+                         class="rounded-lg mx-auto mb-6 w-56 h-auto border-4 ${imageBorderClass} shadow-lg" />
+
+                    <!-- Informação de Nome Padrão -->
+                    <div class="text-left mb-6 bg-gray-700/50 p-4 rounded-lg">
+                        <p class="text-sm font-semibold mb-1 text-gray-400">Nome de Acesso:</p>
+                        <p class="text-2xl text-yellow-300 font-bold">${userName}</p>
+                    </div>
+
+                    <!-- Área do Acordeão com 5 Itens -->
+                    <div class="mb-8">
+                        ${accordionItems}
+                    </div>
+
+                    <!-- Botão MÁSCARA / TIRAR A MÁSCARA -->
+                    <button onclick="${buttonAction}"
+                            class="w-full py-3 rounded-lg font-semibold transition duration-150 
+                                   ${isMaskedActive ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}">
+                        ${buttonText}
+                    </button>
+                    
+                    <!-- NOVO BOTÃO DE RESETAR TUDO -->
+                    <button onclick="window.clearStorage()"
+                            class="w-full py-3 mt-4 rounded-lg font-semibold transition duration-150 bg-gray-600 hover:bg-gray-700">
+                        RESETAR TUDO
+                    </button>
+                </div>
+            `;
+            window.handleMaskOn = handleMaskOn;
+            window.handleMaskOff = handleMaskOff;
+        }
+        
+        // --- Funções Auxiliares de Gerenciamento ---
+
+        // Função para resetar o estado (útil durante o teste)
+        window.clearStorage = function() {
+            localStorage.clear();
+            // Redefinir variáveis globais
+            screen = 'name_input';
+            userName = '';
+            selectedChoice = null;
+            status = 'NONE';
+            confirmedAccess = false;
+            isMasked = false;
+
+            // Garante que o áudio e o efeito de piscar parem
+            audioTense.pause();
+            audioTense.currentTime = 0;
+            document.body.classList.remove('flashing');
+            render();
+        }
+
+        /**
+         * Função principal de renderização, acionada em cada mudança de estado.
+         */
+        function render() {
+            switch (screen) {
+                case 'name_input':
+                    renderNameInput();
+                    break;
+                case 'image_selection':
+                    if (userName) {
+                        renderImageSelection();
+                    } else {
+                        // Volta para a entrada de nome se faltar o nome
+                        screen = 'name_input';
+                        setLocal('screen', screen);
+                        render();
+                    }
+                    break;
+                case 'personal_page':
+                    renderPersonalPage();
+                    break;
+                default:
+                    renderNameInput();
+            }
+        }
+
+        // Inicia a aplicação após o carregamento do DOM
+        document.addEventListener('DOMContentLoaded', render);
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0d0d0d;
+    color: #f9f9f9;
+}
+
+.glow-red { box-shadow: 0 0 15px rgba(255, 0, 0, 0.8); }
+.glow-green { box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); border: 4px solid #00AA00; }
+
+.image-container:not(.disabled):hover {
+    transform: scale(1.03);
+    transition: transform 0.2s;
+}
+
+/* Flash Vermelho */
+.flashing {
+    animation: red-flash 0.1s infinite alternate;
+}
+
+@keyframes red-flash {
+    from { background-color: #0d0d0d; }
+    to { background-color: #400000; }
+}
+
+/* Acordeão */
+.accordion-content {
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 1rem;
+}
+
+.accordion-content.active {
+    max-height: 500px;
+    padding: 1rem;
+}
+
+.rotate-90 {
+    transform: rotate(90deg);
+    transition: transform 0.3s;
+}
+
+/* --- ÁREA EDITÁVEL POR VOCÊ --- */
+
+/* Tamanho das imagens */
+.person-image {
+    width: 180px;
+}
+
+.symbol-image {
+    width: 300px;
+}
+
+/* Caixa central do personagem */
+.info-box {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Texto fixo (Nome, Origem, Classe) */
+.info-box p {
+    margin: 6px 0;
+    font-size: 1rem;
+}
+
+/* Barras de status */
+.status-bar {
+    height: 22px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #333;
+    position: relative;
+}
+
+/* Vida vermelha */
+.bar-life {
+    background: red;
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s;
+}
+
+/* PD azul */
+.bar-pd {
+    background: dodgerblue;
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s;
+}
+
+/* Texto por cima da barra */
+.bar-text {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+    pointer-events: none;
+}
+
+/* Botões */
+.btn-counter {
+    background: black;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-counter:hover {
+    background: #222;
+}
+
+/* Acordeões */
+.accordion-title:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Efeitos das imagens */
+.glow-red { box-shadow: 0 0 10px red; }
+.glow-green { box-shadow: 0 0 10px green; }
+
